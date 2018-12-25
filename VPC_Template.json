@@ -68,6 +68,19 @@
 					}
 				}]
 			}
-		}
+		},
+		 "ReadFileLamda": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+				"FunctionName" : "MyLamdaFunction",
+				"Role" : {"Fn::GetAtt" : ["DMIS3READROLE","Arn"]},
+				"Runtime" : "java8",
+				"Code" : {
+					"S3Bucket" : "pk-poc-templates",
+					  "S3Key" : "demo-1.0.0.jar"
+				},
+				"Handler" : "com.amazonaws.lambda.demo.LamdaStreamHandler::handleRequest"
+			}
+        }
 	}
 }
