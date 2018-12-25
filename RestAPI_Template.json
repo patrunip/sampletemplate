@@ -1,0 +1,17 @@
+{
+  "Type" : "AWS::ApiGateway::RestApi",
+  "Properties" : {  
+    "ApiKeySourceType" : String,
+    "BinaryMediaTypes" : [ String, ... ],
+    "Body" : JSON object,
+    "BodyS3Location" : S3Location,
+    "CloneFrom" : String,
+    "Description" : String,      
+    "EndpointConfiguration" : EndpointConfiguration,
+    "FailOnWarnings" : Boolean,
+    "MinimumCompressionSize" : Integer,
+    "Name" : String,
+    "Parameters" : { String:String, ... },
+    "Policy" : JSON object
+  }
+}

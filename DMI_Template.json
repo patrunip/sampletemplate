@@ -1,0 +1,37 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "LFYS14": {
+            "Type": "AWS::Lambda::Function",
+            "Properties": {
+				"FunctionName" : "DMILamdaPush",
+				"Role" : "arn:aws:iam::674616069637:role/service-role/Lambdarole",			
+				"Runtime" : "java8",
+				"Code" : {
+					"S3Bucket" : "pk-poc-templates",
+					  "S3Key" : "demo-1.0.0.jar"
+				},
+				"Handler" : "com.amazonaws.lambda.demo.LamdaStreamHandler::handleRequest"
+			},
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "bcdc4efc-3ed6-42dc-b726-3bf2f3f43a70"
+                }
+            },
+            "DependsOn": [
+                "AGRA3FTTJ"
+            ]
+        },
+        "AGRA3FTTJ": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+				"Name" : "DMIDataPush"
+			},
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "ca4de26d-a007-48d9-aefc-665946d95401"
+                }
+            }
+        }
+    }
+}

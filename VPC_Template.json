@@ -1,0 +1,73 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Parameters": {
+		"PUBSUBNETA": {
+			"Description": "Public Subnet A",
+			"Type": "String",
+			"Default": "10.0.0.0/24",
+			"AllowedValues": ["10.0.0.0/24"]
+		}
+	},
+	"Resources": {
+		"DMIVPC": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": "10.0.0.0/16",
+				"EnableDnsSupport": "false",
+				"EnableDnsHostnames": "false",
+				"InstanceTenancy": "dedicated",
+				"Tags": [{
+					"Key": "foo",
+					"Value": "bar"
+				}]
+			}
+		},
+		"DMIPUBSUBNET": {
+			"Type": "AWS::EC2::Subnet",
+			"DependsOn": "DMIVPC",
+			"Properties": {
+				"CidrBlock": {
+					"Ref": "PUBSUBNETA"
+				},
+				"VpcId": {
+					"Ref": "DMIVPC"
+				},
+				"MapPublicIpOnLaunch": "true",
+				"AvailabilityZone": {
+					"Fn::Select": ["0",
+					{
+						"Fn::GetAZs": ""
+					}]
+				}
+			}
+		},
+		"DMIS3READROLE": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"RoleName": "DMS3READROLE",
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [{
+						"Effect": "Allow",
+						"Principal": {
+							"Service": ["lambda.amazonaws.com"]
+						},
+						"Action": ["sts:AssumeRole"]
+					}]
+				},
+				"ManagedPolicyArns": ["arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+				"Policies": [{
+					"PolicyName": "S3ReadPolicy",
+					"PolicyDocument": {
+						"Version": "2012-10-17",
+						"Statement": [{
+							"Effect": "Allow",
+							"Action": ["s3:ListBucket"],
+							"Resource": ["arn:aws:s3:::pk-poc-templates"]
+						}]
+					}
+				}]
+			}
+		}
+	}
+}
