@@ -69,18 +69,67 @@
 				}]
 			}
 		},
-		 "ReadFileLamda": {
-            "Type": "AWS::Lambda::Function",
-            "Properties": {
-				"FunctionName" : "MyLamdaFunction",
-				"Role" : {"Fn::GetAtt" : ["DMIS3READROLE","Arn"]},
-				"Runtime" : "java8",
-				"Code" : {
-					"S3Bucket" : "pk-poc-templates",
-					  "S3Key" : "demo-1.0.0.jar"
-				},
-				"Handler" : "com.amazonaws.lambda.demo.LamdaStreamHandler::handleRequest"
+				"DMIReceiveQueue": {
+			"Type": "AWS::SQS::Queue",
+			"Properties": {
+				"QueueName": "DMIInboundQ",
+				"DelaySeconds": "5"
 			}
-        }
+		},
+		"DMISQSPOSTRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"RoleName": "DMSQSPOSTRole",
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [{
+						"Effect": "Allow",
+						"Principal": {
+							"Service": ["lambda.amazonaws.com"]
+						},
+						"Action": ["sts:AssumeRole"]
+					}]
+				},
+				"Policies": [{
+					"PolicyName": "SQSPostPolicy",
+					"PolicyDocument": {
+						"Version": "2012-10-17",
+						"Statement": [{
+							"Effect": "Allow",
+							"Action": ["sqs:SendMessage"],
+							"Resource": [{"Fn::GetAtt": ["DMIReceiveQueue","Arn"]}]
+						}]
+					}
+				}, {
+					"PolicyName": "S3ReadPolicy1",
+					"PolicyDocument": {
+						"Version": "2012-10-17",
+						"Statement": [{
+							"Effect": "Allow",
+							"Action": ["s3:ListBucket"],
+							"Resource": ["arn:aws:s3:::pk-poc-templates"]
+						}]
+					}
+				}]
+			},
+			"DependsOn" : "DMIReceiveQueue"
+		},
+		"ReadFileLamda": {
+			"Type": "AWS::Lambda::Function",
+			"Properties": {
+				"FunctionName": "MyLamdaFunction",
+				"Role": {
+					"Fn::GetAtt": ["DMIS3READROLE",
+					"Arn"], "Fn::GetAtt": ["DMISQSPOSTRole",
+					"Arn"]
+				},
+				"Runtime": "java8",
+				"Code": {
+					"S3Bucket": "pk-poc-templates",
+					"S3Key": "demo-1.0.0.jar"
+				},
+				"Handler": "com.amazonaws.lambda.demo.LamdaStreamHandler::handleRequest"
+			}
+		}
 	}
 }
