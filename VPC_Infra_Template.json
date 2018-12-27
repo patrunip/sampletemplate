@@ -4,14 +4,14 @@
 		"PUBSUBNETA": {
 			"Description": "Public Subnet A",
 			"Type": "String",
-			"Default": "172.31.0.0/16",
-			"AllowedValues": ["172.31.0.0/16"]
+			"Default": "10.0.24.0/24",
+			"AllowedValues": ["10.0.24.0/24"]
 		},
 		"PRVSUBNETA": {
 			"Description": "Private Subnet A",
 			"Type": "String",
-			"Default": "172.31.1.0/16",
-			"AllowedValues": ["172.31.1.0/16"]
+			"Default": "10.0.6.0/24",
+			"AllowedValues": ["10.0.6.0/24"]
 		},
 		"LatestAmiId": {
 			"Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
@@ -22,7 +22,7 @@
 		"DMIVPC": {
 			"Type": "AWS::EC2::VPC",
 			"Properties": {
-				"CidrBlock": "172.31.0.0/16",
+				"CidrBlock": "10.0.0.0/16",
 				"EnableDnsSupport": "false",
 				"EnableDnsHostnames": "false",
 				"InstanceTenancy": "default",
@@ -31,16 +31,56 @@
 					"Value": "DMIVPC"
 				}]
 			}
+		},"DMISimpleIGW": {
+			"Type": "AWS::EC2::InternetGateway",
+			"Properties": {
+				"Tags": [{
+					"Key": "Name",
+					"Value": "DMIInternetGW"
+				}]
+			}
+		},"DMIGatewayAttachment": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"Properties": {
+				"VpcId": {
+					"Ref": "DMIVPC"
+				},
+				"InternetGatewayId": {
+					"Ref": "DMISimpleIGW"
+				}
+			}
+		},"DMIRTB": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "DMIVPC"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "DMIRTB"
+				}]
+			}
+		},"DMIRoute": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"GatewayId": {
+					"Ref": "DMISimpleIGW"
+				},
+				"RouteTableId": {
+					"Ref": "DMIRTB"
+				}
+			}
 		},
 		"DMIPUBSUBNET": {
 			"Type": "AWS::EC2::Subnet",
 			"DependsOn": "DMIVPC",
 			"Properties": {
-				"CidrBlock": {
-					"Ref": "PUBSUBNETA"
-				},
 				"VpcId": {
 					"Ref": "DMIVPC"
+				},
+			"CidrBlock": {
+					"Ref": "PUBSUBNETA"
 				},
 				"MapPublicIpOnLaunch": "true",
 				"AvailabilityZone": {
@@ -48,6 +88,16 @@
 					{
 						"Fn::GetAZs": ""
 					}]
+				}
+			}
+		},"DMIPubSubnetRTA": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "DMIRTB"
+				},
+				"SubnetId": {
+					"Ref": "DMIPUBSUBNET"
 				}
 			}
 		},
@@ -100,7 +150,6 @@
 		},
 		"DMIRefCommandInstance": {
 			"Type": "AWS::EC2::Instance",
-			"DependsOn": ["DMIPUBSUBNET"],
 			"Properties": {
 				"ImageId": "ami-0b4b39d21f8f1eca9",
 				"InstanceType": "t2.micro",
