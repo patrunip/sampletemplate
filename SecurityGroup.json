@@ -1,0 +1,33 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Resources": {
+		"DMIPubSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupName": "DMIPubSecGrp",
+				"GroupDescription": "Public Subnet SecurityGroup",
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": 80,
+					"ToPort": 80,
+					"CidrIp": "0.0.0.0/0"
+				},
+				{
+					"IpProtocol": "http",
+					"FromPort": 80,
+					"ToPort": 80,
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "tcp",
+					"FromPort": 80,
+					"ToPort": 80,
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"VpcId": {
+					"Ref": "DMIVPC"
+				}
+			}
+		}
+	}
+}
