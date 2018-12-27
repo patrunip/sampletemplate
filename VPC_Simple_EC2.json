@@ -1,0 +1,166 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Parameters": {
+		"PUBSUBNETA": {
+			"Description": "Public Subnet A",
+			"Type": "String",
+			"Default": "10.0.0.0/24",
+			"AllowedValues": ["10.0.0.0/24"]
+		},
+		"PRVSUBNETA": {
+			"Description": "Private Subnet A",
+			"Type": "String",
+			"Default": "10.0.1.0/24",
+			"AllowedValues": ["10.0.1.0/24"]
+		},
+		"LatestAmiId": {
+			"Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+			"Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+		}
+	},
+	"Resources": {
+		"MySimpleVpc": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": "172.31.0.0/16",
+				"EnableDnsSupport": "true",
+				"EnableDnsHostnames": "true",
+				"InstanceTenancy": "default",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "MySimpleVpc"
+				}]
+			}
+		},"MySimpleIGW": {
+			"Type": "AWS::EC2::InternetGateway",
+			"Properties": {
+				"Tags": [{
+					"Key": "Name",
+					"Value": "MySimpleIGW"
+				}]
+			}
+		},"MySimpleGatewayAttachment": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"Properties": {
+				"VpcId": {
+					"Ref": "MySimpleVpc"
+				},
+				"InternetGatewayId": {
+					"Ref": "MySimpleIGW"
+				}
+			}
+		},"MySimpleRTB": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "MySimpleVpc"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "MySimpleRTB"
+				}]
+			}
+		},"MySimpleRoute": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"GatewayId": {
+					"Ref": "MySimpleIGW"
+				},
+				"RouteTableId": {
+					"Ref": "MySimpleRTB"
+				}
+			}
+		},"MySimpleSubnet": {
+			"Type": "AWS::EC2::Subnet",
+			"Properties": {
+				"VpcId": {
+					"Ref": "MySimpleVpc"
+				},
+				"CidrBlock": "172.31.0.0/16",
+				"AvailabilityZone": {
+					"Fn::Select": [0,
+					{
+						"Fn::GetAZs": ""
+					}]
+				}
+			}
+		},"MySimpleSubnetRTA": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "MySimpleRTB"
+				},
+				"SubnetId": {
+					"Ref": "MySimpleSubnet"
+				}
+			}
+		},"MySimpleSG": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "MySimpleVpc"
+				},
+				"GroupDescription": "Enable HTTP, HTTPS and SSH access",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "MySimpleVpc Security Group"
+				}],
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": "443",
+					"ToPort": "443",
+					"CidrIp": "0.0.0.0/0"
+				},
+				{
+					"IpProtocol": "tcp",
+					"FromPort": "80",
+					"ToPort": "80",
+					"CidrIp": "0.0.0.0/0"
+				},
+				{
+					"IpProtocol": "tcp",
+					"FromPort": "22",
+					"ToPort": "22",
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		},"MySimpleServer": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": "ami-0b4b39d21f8f1eca9",
+				"InstanceType": "t2.micro",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "MySimpleServer"
+				}],
+				"KeyName": "ec2key",
+				"NetworkInterfaces": [{
+					"SubnetId": {
+						"Ref": "MySimpleSubnet"
+					},
+					"AssociatePublicIpAddress": "true",
+					"DeviceIndex": "0",
+					"GroupSet": [{
+						"Ref": "MySimpleSG"
+					}]
+				}],
+				"UserData": {
+					"Fn::Base64": {
+						"Fn::Join": ["",
+						["#!/bin/bash -v\n",
+						"#sudo apt-get update"]]
+					}
+				}
+			}
+		}
+	},
+	"Outputs": {
+		"MySimpleServerInstanceId": {
+			"Description": "InstanceId of the newly created Simple Server EC2 instance",
+			"Value": {
+				"Ref": "MySimpleServer"
+			}
+		}
+	}
+}
