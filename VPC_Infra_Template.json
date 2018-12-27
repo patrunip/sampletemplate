@@ -1,0 +1,198 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Parameters": {
+		"PUBSUBNETA": {
+			"Description": "Public Subnet A",
+			"Type": "String",
+			"Default": "10.0.0.0/24",
+			"AllowedValues": ["10.0.0.0/24"]
+		},
+		"PRVSUBNETA": {
+			"Description": "Private Subnet A",
+			"Type": "String",
+			"Default": "10.0.1.0/24",
+			"AllowedValues": ["10.0.1.0/24"]
+		},
+		"LatestAmiId": {
+    "Type":  "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+    "Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+		}
+	},
+	"Resources": {
+		"DMIVPC": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": "10.0.0.0/16",
+				"EnableDnsSupport": "false",
+				"EnableDnsHostnames": "false",
+				"InstanceTenancy": "dedicated",
+				"Tags": [{
+					"Key": "foo",
+					"Value": "bar"
+				}]
+			}
+		},
+		"DMIPUBSUBNET": {
+			"Type": "AWS::EC2::Subnet",
+			"DependsOn": "DMIVPC",
+			"Properties": {
+				"CidrBlock": {
+					"Ref": "PUBSUBNETA"
+				},
+				"VpcId": {
+					"Ref": "DMIVPC"
+				},
+				"MapPublicIpOnLaunch": "true",
+				"AvailabilityZone": {
+					"Fn::Select": ["0",
+					{
+						"Fn::GetAZs": ""
+					}]
+				}
+			}
+		},
+		"DMIPRVSUBNET": {
+			"Type": "AWS::EC2::Subnet",
+			"DependsOn": "DMIVPC",
+			"Properties": {
+				"CidrBlock": {
+					"Ref": "PRVSUBNETA"
+				},
+				"VpcId": {
+					"Ref": "DMIVPC"
+				},
+				"MapPublicIpOnLaunch": "false",
+				"AvailabilityZone": {
+					"Fn::Select": ["0",
+					{
+						"Fn::GetAZs": ""
+					}]
+				}
+			}
+		},
+		"DMIPubSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"GroupName": "DMIPubSecGrp",
+				"GroupDescription": "Public Subnet SecurityGroup",
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": 80,
+					"ToPort": 80,
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "tcp",
+					"FromPort": 80,
+					"ToPort": 80,
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"VpcId": {
+					"Ref": "DMIVPC"
+				}
+			}
+		},
+		"DMIRefCommandInstance":{
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+			"InstanceType": "t2.micro",
+			"ImageId": "ami-0b4b39d21f8f1eca9",
+			"SubnetId": { "Ref" : "DMIPRVSUBNET" },
+			"SecurityGroupIds": [{"Ref" : "DMIPubSecGrp"}]
+			}
+		},
+		"DMIS3READROLE": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"RoleName": "DMS3READROLE",
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [{
+						"Effect": "Allow",
+						"Principal": {
+							"Service": ["lambda.amazonaws.com"]
+						},
+						"Action": ["sts:AssumeRole"]
+					}]
+				},
+				"ManagedPolicyArns": ["arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"],
+				"Policies": [{
+					"PolicyName": "S3ReadPolicy",
+					"PolicyDocument": {
+						"Version": "2012-10-17",
+						"Statement": [{
+							"Effect": "Allow",
+							"Action": ["s3:ListBucket"],
+							"Resource": ["arn:aws:s3:::pk-poc-templates"]
+						}]
+					}
+				}]
+			}
+		},
+		"DMIReceiveQueue": {
+			"Type": "AWS::SQS::Queue",
+			"Properties": {
+				"QueueName": "DMIInboundQ",
+				"DelaySeconds": "5"
+			}
+		},
+		"DMILamdaRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"RoleName": "DMILamdaRole",
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [{
+						"Effect": "Allow",
+						"Principal": {
+							"Service": ["lambda.amazonaws.com"]
+						},
+						"Action": ["sts:AssumeRole"]
+					}]
+				},
+				"Policies": [{
+					"PolicyName": "PostToSQSPolicy",
+					"PolicyDocument": {
+						"Version": "2012-10-17",
+						"Statement": [{
+							"Effect": "Allow",
+							"Action": ["sqs:SendMessage"],
+							"Resource": [{
+								"Fn::GetAtt": ["DMIReceiveQueue",
+								"Arn"]
+							}]
+						}]
+					}
+				},
+				{
+					"PolicyName": "ReadFromS3Policy",
+					"PolicyDocument": {
+						"Version": "2012-10-17",
+						"Statement": [{
+							"Effect": "Allow",
+							"Action": ["s3:ListBucket"],
+							"Resource": ["arn:aws:s3:::pk-poc-templates"]
+						}]
+					}
+				}]
+			},
+			"DependsOn": "DMIReceiveQueue"
+		},
+		"ReadFileLamda": {
+			"Type": "AWS::Lambda::Function",
+			"Properties": {
+				"FunctionName": "MyLamdaFunction",
+				"Role": {
+					"Fn::GetAtt": ["DMILamdaRole",
+					"Arn"]
+				},
+				"Runtime": "java8",
+				"Code": {
+					"S3Bucket": "pk-poc-templates",
+					"S3Key": "demo-1.0.0.jar"
+				},
+				"Handler": "com.amazonaws.lambda.demo.LamdaStreamHandler::handleRequest"
+			}
+		}
+	}
+}
