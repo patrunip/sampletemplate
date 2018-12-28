@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  EC2:
+   Type: AWS::EC2::Instance
+   Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              httpd: []
+              php: []
+              mysql: []
+              php-mysql: []
+          files:
+            "/var/www/html/index.html":
+              content: |
+               <html>
+                 <body>
+                   <h1>Devop Demo Cloud Formation</h1>
+                   <p>Hello World! Updated</p>
+                 </body>
+                </html>
+              mode: '000644'
+              owner: root
+              group: root
+          services:
+            sysvinit:
+              httpd:
+                enabled: 'true'
+                ensureRunning: 'true'
+   Properties:
+    ImageId: ami-c481fad3
+    InstanceType: t2.micro 
+    KeyName: aws-ik
+    UserData:
+     Fn::Base64: !Sub | 
+            #!/bin/bash
+            yum update -y aws-cfn-bootstrap #good practice it contains utilites to bootstrap instance
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2 --region ${AWS::Region}
+            yum -y update # run after cfninit as it would update packages installed in cfninit process

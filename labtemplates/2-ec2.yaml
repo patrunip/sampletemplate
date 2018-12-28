@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  EC2demo:
+   Type: AWS::EC2::Instance
+   Properties:
+    ImageId: ami-c481fad3
+    InstanceType: t2.micro 
+    KeyName: aws-ik
+    UserData:
+     Fn::Base64: !Sub | 
+            #!/bin/bash
+            yum update -y
+            yum install -y httpd php mysql php-mysql
+            yum install nginix
+            chkconfig httpd on
+            service httpd start
+            echo "Today is Devops Demo Day" >>/var/www/html/test.html

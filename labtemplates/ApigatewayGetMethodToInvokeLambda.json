@@ -1,0 +1,85 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "test API Gateway to invoke Lambda",
+    "Resources": {
+"TestApiGatewayLambda": {
+  "Type": "AWS::Lambda::Function",
+  "Properties": {
+    "Handler": "index.handler",
+    "Role": "arn:aws:iam::123456789:role/lambda_invoke_function_assume_apigw_role",
+    "Code": {
+      "S3Bucket": "bucket_name",
+      "S3Key": "nodejs.zip"
+    },
+    "Runtime": "nodejs6.10",
+    "Timeout": 25
+  }
+},
+"LambdaPermission": {
+  "Type": "AWS::Lambda::Permission",
+  "Properties": {
+    "Action": "lambda:invokeFunction",
+    "FunctionName": {"Fn::GetAtt": ["TestApiGatewayLambda", "Arn"]},
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {"Fn::Join": ["", ["arn:aws:execute-api:", {"Ref": "AWS::Region"}, ":", {"Ref": "AWS::AccountId"}, ":", {"Ref": "ApiGatewayGetMethod"}, "/*/GET/Calc"]]}
+  }
+},
+"ApiGatewayResource":
+  {
+    "Type" : "AWS::ApiGateway::Resource",
+    "Properties" : {
+      "ParentId" : { "Fn::GetAtt": ["RestApi", "RootResourceId"] },
+      "PathPart" : "Calc",
+      "RestApiId" : { "Ref": "RestApi" }
+  }
+},
+"RestApi": {
+            "Type": "AWS::ApiGateway::RestApi",
+            "Properties": {
+                "Name": "LambdaGate2"
+            }
+        },
+"ApiGatewayGetMethod":
+{
+"DependsOn":"TestApiGatewayLambda",
+"Type" : "AWS::ApiGateway::Method",
+"Properties" : {
+  "ApiKeyRequired" : "false",
+  "AuthorizationType" : "NONE",
+  "HttpMethod" : "GET",
+  "Integration" :
+  {
+  "IntegrationHttpMethod" : "POST",
+  "Credentials": "arn:aws:iam::123456789:role/lambda_invoke_function_assume_apigw_role",
+  "IntegrationResponses" : [ {
+  "StatusCode" : "200"
+} ],
+  "RequestTemplates" : {
+    "application/json": {"Fn::Join": ["", [
+      "{",
+      "  \"a\": \"$input.params('operand1')\"",
+      ",",
+      "  \"b\": \"$input.params('operand2')\"",
+      ",",
+      "  \"op\": \"$input.params('operator')\"",
+      "}"
+    ]]}
+  },
+  "Type" : "AWS",
+  "Uri" : {"Fn::Join" : ["",[ "arn:aws:apigateway:us-east-1:lambda:path/", "/2015-03-31/functions/",{ "Fn::GetAtt" : [ "TestApiGatewayLambda", "Arn" ]}, "/invocations" ] ]}
+},
+  "MethodResponses" : [{
+  "StatusCode" : "200"
+} ],
+  "OperationName" : "/callback",
+  "RequestParameters" : {  "method.request.querystring.operand1": true,"method.request.querystring.operand2": true,"method.request.querystring.operator": true },
+  "ResourceId" : { "Ref": "ApiGatewayResource" },
+  "RestApiId" : { "Ref": "RestApi" }
+}
+}
+
+
+
+
+    }
+}
