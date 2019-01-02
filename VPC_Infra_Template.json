@@ -154,6 +154,10 @@
 				"ImageId": "ami-0b4b39d21f8f1eca9",
 				"InstanceType": "t2.micro",
 				"KeyName": "ec2key",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "DMIPubCommandInstance"
+				}],
 				"NetworkInterfaces": [{
 					"SubnetId": {
 						"Ref": "DMIPUBSUBNET"
@@ -165,6 +169,38 @@
 					}]
 				}]
 			}
+		},
+		"DMIRefPrivCommandInstance": {
+			"Type": "AWS::EC2::Instance",
+			"Properties": {
+				"ImageId": "ami-0b4b39d21f8f1eca9",
+				"InstanceType": "t2.micro",
+				"KeyName": "ec2key",
+				"Tags": [{
+					"Key": "Name",
+					"Value": "DMIPrivCommandInstance"
+				}],
+				"NetworkInterfaces": [{
+					"SubnetId": {
+						"Ref": "DMIPRVSUBNET"
+					},
+					"DeviceIndex": "0",
+					"GroupSet": [{
+						"Ref": "DMIPubSecGrp"
+					}]
+				}]
+			}
+		},
+		"DMIS3Space":{
+		"Type": "AWS::S3::Bucket",
+		"Properties": {
+		"AccessControl": "Private",
+		"BucketName": "POCBucket",
+		"Tags": [{
+					"Key": "Name",
+					"Value": "POCS3Space"
+				}]
+		}
 		},
 		"DMIS3READROLE": {
 			"Type": "AWS::IAM::Role",
