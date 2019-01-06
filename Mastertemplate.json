@@ -1,0 +1,155 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Parameters": {
+		"PUBSUBNETA": {
+			"ParameterKey": "PUBSUBNETA",
+			"Description": "Public Subnet A",
+			"Type": "String",
+			"Default": "10.0.24.0/24",
+			"AllowedValues": ["10.0.24.0/24"]
+		},
+		"PRVSUBNETA": {
+			"ParameterKey": "PRVSUBNETA",
+			"Description": "Private Subnet A",
+			"Type": "String",
+			"Default": "10.0.6.0/24",
+			"AllowedValues": ["10.0.6.0/24"]
+		},
+		"LatestAmiId": {
+			"ParameterKey": "LatestAmiId",
+			"Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+			"Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+		}
+	},
+	"Resources": {
+		"POCVPC": {
+			"Type": "AWS::EC2::VPC",
+			"Properties": {
+				"CidrBlock": "10.0.0.0/16",
+				"EnableDnsSupport": "false",
+				"EnableDnsHostnames": "false",
+				"InstanceTenancy": "default",
+				"Tags": [{
+				"Key": "Name",
+					"Value": "POCVPC"
+				}]
+			}
+		},"POCSimpleIGW": {
+			"Type": "AWS::EC2::InternetGateway",
+			"Properties": {
+				"Tags": [{
+					"Key": "Name",
+					"Value": "POCInternetGW"
+				}]
+			}
+		},"POCGatewayAttachment": {
+			"Type": "AWS::EC2::VPCGatewayAttachment",
+			"Properties": {
+				"VpcId": {
+					"Ref": "POCVPC"
+				},
+				"InternetGatewayId": {
+					"Ref": "POCSimpleIGW"
+				}
+			}
+		},"POCRTB": {
+			"Type": "AWS::EC2::RouteTable",
+			"Properties": {
+				"VpcId": {
+					"Ref": "POCVPC"
+				},
+				"Tags": [{
+					"Key": "Name",
+					"Value": "POCRTB"
+				}]
+			}
+		},"POCRoute": {
+			"Type": "AWS::EC2::Route",
+			"Properties": {
+				"DestinationCidrBlock": "0.0.0.0/0",
+				"GatewayId": {
+					"Ref": "POCSimpleIGW"
+				},
+				"RouteTableId": {
+					"Ref": "POCRTB"
+				}
+			}
+		},
+		"POCPUBSUBNET": {
+			"Type": "AWS::EC2::Subnet",
+			"DependsOn": "POCVPC",
+			"Properties": {
+				"VpcId": {
+					"Ref": "POCVPC"
+				},
+			"CidrBlock": {
+					"Ref": "PUBSUBNETA"
+				},
+				"MapPublicIpOnLaunch": "true",
+				"AvailabilityZone": {
+					"Fn::Select": [0,
+					{
+						"Fn::GetAZs": ""
+					}]
+				}
+			}
+		},"POCPubSubnetRTA": {
+			"Type": "AWS::EC2::SubnetRouteTableAssociation",
+			"Properties": {
+				"RouteTableId": {
+					"Ref": "POCRTB"
+				},
+				"SubnetId": {
+					"Ref": "POCPUBSUBNET"
+				}
+			}
+		},
+		"POCPRVSUBNET": {
+			"Type": "AWS::EC2::Subnet",
+			"DependsOn": "POCVPC",
+			"Properties": {
+				"CidrBlock": {
+					"Ref": "PRVSUBNETA"
+				},
+				"VpcId": {
+					"Ref": "POCVPC"
+				},
+				"MapPublicIpOnLaunch": "false",
+				"AvailabilityZone": {
+					"Fn::Select": [0,
+					{
+						"Fn::GetAZs": ""
+					}]
+				}
+			}
+		},
+		"POCPubSecGrp": {
+			"Type": "AWS::EC2::SecurityGroup",
+			"Properties": {
+				"VpcId": {
+					"Ref": "POCVPC"
+				},
+				"GroupName": "POCPubSecGrp",
+				"GroupDescription": "Public Subnet SecurityGroup",
+				"SecurityGroupIngress": [{
+					"IpProtocol": "tcp",
+					"FromPort": 80,
+					"ToPort": 80,
+					"CidrIp": "0.0.0.0/0"
+				},
+				{
+					"IpProtocol": "tcp",
+					"FromPort": "22",
+					"ToPort": "22",
+					"CidrIp": "0.0.0.0/0"
+				}],
+				"SecurityGroupEgress": [{
+					"IpProtocol": "tcp",
+					"FromPort": 80,
+					"ToPort": 80,
+					"CidrIp": "0.0.0.0/0"
+				}]
+			}
+		}
+	}
+}
