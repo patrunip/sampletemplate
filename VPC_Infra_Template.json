@@ -19,7 +19,7 @@
 		}
 	},
 	"Resources": {
-		"DMIVPC": {
+		"POCVPC": {
 			"Type": "AWS::EC2::VPC",
 			"Properties": {
 				"CidrBlock": "10.0.0.0/16",
@@ -28,56 +28,56 @@
 				"InstanceTenancy": "default",
 				"Tags": [{
 				"Key": "Name",
-					"Value": "DMIVPC"
+					"Value": "POCVPC"
 				}]
 			}
-		},"DMISimpleIGW": {
+		},"POCSimpleIGW": {
 			"Type": "AWS::EC2::InternetGateway",
 			"Properties": {
 				"Tags": [{
 					"Key": "Name",
-					"Value": "DMIInternetGW"
+					"Value": "POCInternetGW"
 				}]
 			}
-		},"DMIGatewayAttachment": {
+		},"POCGatewayAttachment": {
 			"Type": "AWS::EC2::VPCGatewayAttachment",
 			"Properties": {
 				"VpcId": {
-					"Ref": "DMIVPC"
+					"Ref": "POCVPC"
 				},
 				"InternetGatewayId": {
-					"Ref": "DMISimpleIGW"
+					"Ref": "POCSimpleIGW"
 				}
 			}
-		},"DMIRTB": {
+		},"POCRTB": {
 			"Type": "AWS::EC2::RouteTable",
 			"Properties": {
 				"VpcId": {
-					"Ref": "DMIVPC"
+					"Ref": "POCVPC"
 				},
 				"Tags": [{
 					"Key": "Name",
-					"Value": "DMIRTB"
+					"Value": "POCRTB"
 				}]
 			}
-		},"DMIRoute": {
+		},"POCRoute": {
 			"Type": "AWS::EC2::Route",
 			"Properties": {
 				"DestinationCidrBlock": "0.0.0.0/0",
 				"GatewayId": {
-					"Ref": "DMISimpleIGW"
+					"Ref": "POCSimpleIGW"
 				},
 				"RouteTableId": {
-					"Ref": "DMIRTB"
+					"Ref": "POCRTB"
 				}
 			}
 		},
-		"DMIPUBSUBNET": {
+		"POCPUBSUBNET": {
 			"Type": "AWS::EC2::Subnet",
-			"DependsOn": "DMIVPC",
+			"DependsOn": "POCVPC",
 			"Properties": {
 				"VpcId": {
-					"Ref": "DMIVPC"
+					"Ref": "POCVPC"
 				},
 			"CidrBlock": {
 					"Ref": "PUBSUBNETA"
@@ -90,26 +90,26 @@
 					}]
 				}
 			}
-		},"DMIPubSubnetRTA": {
+		},"POCPubSubnetRTA": {
 			"Type": "AWS::EC2::SubnetRouteTableAssociation",
 			"Properties": {
 				"RouteTableId": {
-					"Ref": "DMIRTB"
+					"Ref": "POCRTB"
 				},
 				"SubnetId": {
-					"Ref": "DMIPUBSUBNET"
+					"Ref": "POCPUBSUBNET"
 				}
 			}
 		},
-		"DMIPRVSUBNET": {
+		"POCPRVSUBNET": {
 			"Type": "AWS::EC2::Subnet",
-			"DependsOn": "DMIVPC",
+			"DependsOn": "POCVPC",
 			"Properties": {
 				"CidrBlock": {
 					"Ref": "PRVSUBNETA"
 				},
 				"VpcId": {
-					"Ref": "DMIVPC"
+					"Ref": "POCVPC"
 				},
 				"MapPublicIpOnLaunch": "false",
 				"AvailabilityZone": {
@@ -120,13 +120,13 @@
 				}
 			}
 		},
-		"DMIPubSecGrp": {
+		"POCPubSecGrp": {
 			"Type": "AWS::EC2::SecurityGroup",
 			"Properties": {
 				"VpcId": {
-					"Ref": "DMIVPC"
+					"Ref": "POCVPC"
 				},
-				"GroupName": "DMIPubSecGrp",
+				"GroupName": "POCPubSecGrp",
 				"GroupDescription": "Public Subnet SecurityGroup",
 				"SecurityGroupIngress": [{
 					"IpProtocol": "tcp",
@@ -148,7 +148,7 @@
 				}]
 			}
 		},
-		"DMIRefCommandInstance": {
+		"POCRefCommandInstance": {
 			"Type": "AWS::EC2::Instance",
 			"Properties": {
 				"ImageId": "ami-0b4b39d21f8f1eca9",
@@ -156,21 +156,21 @@
 				"KeyName": "ec2key",
 				"Tags": [{
 					"Key": "Name",
-					"Value": "DMIPubCommandInstance"
+					"Value": "POCPubCommandInstance"
 				}],
 				"NetworkInterfaces": [{
 					"SubnetId": {
-						"Ref": "DMIPUBSUBNET"
+						"Ref": "POCPUBSUBNET"
 					},
 					"AssociatePublicIpAddress": "true",
 					"DeviceIndex": "0",
 					"GroupSet": [{
-						"Ref": "DMIPubSecGrp"
+						"Ref": "POCPubSecGrp"
 					}]
 				}]
 			}
 		},
-		"DMIRefPrivCommandInstance": {
+		"POCRefPrivCommandInstance": {
 			"Type": "AWS::EC2::Instance",
 			"Properties": {
 				"ImageId": "ami-0b4b39d21f8f1eca9",
@@ -178,31 +178,31 @@
 				"KeyName": "ec2key",
 				"Tags": [{
 					"Key": "Name",
-					"Value": "DMIPrivCommandInstance"
+					"Value": "POCPrivCommandInstance"
 				}],
 				"NetworkInterfaces": [{
 					"SubnetId": {
-						"Ref": "DMIPRVSUBNET"
+						"Ref": "POCPRVSUBNET"
 					},
 					"DeviceIndex": "0",
 					"GroupSet": [{
-						"Ref": "DMIPubSecGrp"
+						"Ref": "POCPubSecGrp"
 					}]
 				}]
 			}
 		},
-		"DMIS3Space":{
+		"POCS3Space":{
 		"Type": "AWS::S3::Bucket",
 		"Properties": {
 		"AccessControl": "Private",
-		"BucketName": "POCBucket",
+		"BucketName": "pocpkbucket",
 		"Tags": [{
 					"Key": "Name",
 					"Value": "POCS3Space"
 				}]
 		}
 		},
-		"DMIS3READROLE": {
+		"POCS3READROLE": {
 			"Type": "AWS::IAM::Role",
 			"Properties": {
 				"RoleName": "DMS3READROLE",
@@ -230,17 +230,17 @@
 				}]
 			}
 		},
-		"DMIReceiveQueue": {
+		"POCReceiveQueue": {
 			"Type": "AWS::SQS::Queue",
 			"Properties": {
-				"QueueName": "DMIInboundQ",
+				"QueueName": "POCInboundQ",
 				"DelaySeconds": "5"
 			}
 		},
-		"DMILamdaRole": {
+		"POCLamdaRole": {
 			"Type": "AWS::IAM::Role",
 			"Properties": {
-				"RoleName": "DMILamdaRole",
+				"RoleName": "POCLamdaRole",
 				"AssumeRolePolicyDocument": {
 					"Version": "2012-10-17",
 					"Statement": [{
@@ -259,7 +259,7 @@
 							"Effect": "Allow",
 							"Action": ["sqs:SendMessage"],
 							"Resource": [{
-								"Fn::GetAtt": ["DMIReceiveQueue",
+								"Fn::GetAtt": ["POCReceiveQueue",
 								"Arn"]
 							}]
 						}]
@@ -277,14 +277,14 @@
 					}
 				}]
 			},
-			"DependsOn": "DMIReceiveQueue"
+			"DependsOn": "POCReceiveQueue"
 		},
 		"ReadFileLamda": {
 			"Type": "AWS::Lambda::Function",
 			"Properties": {
-				"FunctionName": "MyLamdaFunction",
+				"FunctionName": "MyLamdaPOCFunction",
 				"Role": {
-					"Fn::GetAtt": ["DMILamdaRole",
+					"Fn::GetAtt": ["POCLamdaRole",
 					"Arn"]
 				},
 				"Runtime": "java8",
