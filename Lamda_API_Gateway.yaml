@@ -29,7 +29,7 @@ Resources:
             - ":"
             - Ref: AWS::AccountId
             - ":"
-            - Ref: ApiGatewayGetMethod
+            - Ref: RestApi
             - "/*"
   ApiGatewayResource:
     Type: AWS::ApiGateway::Resource
@@ -45,16 +45,22 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: LambdaGate2
+  Deployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: ApiGatewayGetMethod
+    Properties:
+      RestApiId:
+           Ref: RestApi      
+      StageName: Test
   ApiGatewayGetMethod:
     DependsOn: TestApiGatewayLambda
     Type: AWS::ApiGateway::Method
     Properties:
-      ApiKeyRequired: 'false'
+      ApiKeyRequired: false
       AuthorizationType: NONE
-      HttpMethod: GET
+      HttpMethod: ANY
       Integration:
         IntegrationHttpMethod: POST
-        Credentials: arn:aws:iam::674616069637:role/LamdaS3
         IntegrationResponses:
         - StatusCode: '200'
         RequestTemplates:
@@ -68,7 +74,7 @@ Resources:
                 - ","
                 - '  "op": "$input.params(''operator'')"'
                 - "}"
-        Type: AWS
+        Type: AWS_PROXY
         Uri:
           Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TestApiGatewayLambda.Arn}/invocations
       MethodResponses:
